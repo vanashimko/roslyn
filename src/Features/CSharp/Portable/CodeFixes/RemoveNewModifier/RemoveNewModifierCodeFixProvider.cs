@@ -59,31 +59,19 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeFixes.RemoveNewModifier
 
             if (newModifier.HasTrailingTrivia || newModifier.HasLeadingTrivia)
             {
-                var newModifierTrivia = newModifier.GetAllTrivia().ToSyntaxTriviaList();
-                var previousToken = newModifier.GetPreviousToken();
                 var nextToken = newModifier.GetNextToken();
 
-                var sourceText = await document.GetTextAsync(cancellationToken).ConfigureAwait(false);
-                var isFirstTokenOnLine = newModifier.IsFirstTokenOnLine(sourceText);
+                var triviaToMove = new SyntaxTriviaList()
+                    .Add(SyntaxFactory.ElasticMarker)
+                    .AddRange(newModifier.LeadingTrivia)
+                    .Add(SyntaxFactory.ElasticMarker)
+                    .AddRange(newModifier.TrailingTrivia)
+                    .Add(SyntaxFactory.ElasticMarker);
 
-                var newTrivia = new SyntaxTriviaList();
-                if (!isFirstTokenOnLine)
-                    newTrivia = newTrivia.AddRange(previousToken.TrailingTrivia);
-                newTrivia = newTrivia
-                    .AddRange(newModifierTrivia)
-                    .AddRange(nextToken.LeadingTrivia)
-                    .CollapseSequentialWhitespaceTrivia();
+                var nextTokenWithMovedTrivia = nextToken
+                    .WithPrependedLeadingTrivia(triviaToMove);
 
-                if (isFirstTokenOnLine)
-                {
-                    var nextTokenWithMovedTrivia = nextToken.WithLeadingTrivia(newTrivia);
-                    newNode = newNode.ReplaceToken(nextToken, nextTokenWithMovedTrivia);
-                }
-                else
-                {
-                    var previousTokenWithMovedTrivia = previousToken.WithTrailingTrivia(newTrivia);
-                    newNode = newNode.ReplaceToken(previousToken, previousTokenWithMovedTrivia);
-                }
+                newNode = newNode.ReplaceToken(nextToken, nextTokenWithMovedTrivia);
             }
 
             newNode = newNode.ReplaceToken(GetNewModifier(newNode, syntaxFacts), SyntaxFactory.Token(SyntaxKind.None));
