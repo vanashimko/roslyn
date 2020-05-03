@@ -19,69 +19,69 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.Diagnostics.RemoveNewMo
 
         [Theory]
         [InlineData(
-            @"public static new void [|Method()|] { }",
-            @"public static void [|Method()|] { }")]
+            @"public static [|new|] void Method() { }",
+            @"public static void Method() { }")]
         [InlineData(
-            "public new int [|Test|];",
-            "public int [|Test|];")]
+            "public [|new|] int Test;",
+            "public int Test;")]
         [InlineData(
-            "public new int [|Test|] { get; set; }",
-            "public int [|Test|] { get; set; }")]
+            "public [|new|] int Test { get; set; }",
+            "public int Test { get; set; }")]
         [InlineData(
-            "public const new int [|test|] = 1;",
-            "public const int [|test|] = 1;")]
+            "public const [|new|] int test = 1;",
+            "public const int test = 1;")]
         [InlineData(
-            "public new event Action [|Test|];",
+            "public [|new|] event Action Test;",
             "public event Action Test;")]
         [InlineData(
-            "public new int [|this[int p]|] => p;",
+            "public [|new|] int this[int p] => p;",
             "public int this[int p] => p;")]
         [InlineData(
-            "new class [|Test|] { }",
+            "[|new|] class Test { }",
             "class Test { }")]
         [InlineData(
-            "new struct [|Test|] { }",
+            "[|new|] struct Test { }",
             "struct Test { }")]
         [InlineData(
-            "new interface [|Test|] { }",
+            "[|new|] interface Test { }",
             "interface Test { }")]
         [InlineData(
-            "new delegate [|Test|]()",
+            "[|new|] delegate Test()",
             "delegate Test()")]
         [InlineData(
-            "new enum [|Test|] { }",
+            "[|new|] enum Test { }",
             "enum Test { }")]
         [InlineData(
-            "new(int a, int b) [|test|];",
+            "[|new|](int a, int b) test;",
             "(int a, int b) test;")]
         public Task TestRemoveNewModifierFromMembersWithRegularFormatting(string original, string expected) =>
             TestRemoveNewModifierCodeFixAsync(original, expected);
 
         [Theory]
         [InlineData(
-            "/* start */ public /* middle */ new /* end */ int [|Test|];",
+            "/* start */ public /* middle */ [|new|] /* end */ int Test;",
             "/* start */ public /* middle */ /* end */ int Test;")]
         [InlineData(
-            "/* start */ public /* middle */ new    /* end */ int [|Test|];",
+            "/* start */ public /* middle */ [|new|]    /* end */ int Test;",
             "/* start */ public /* middle */ /* end */ int Test;")]
         [InlineData(
-            "/* start */ public /* middle */new /* end */ int [|Test|];",
+            "/* start */ public /* middle */[|new|] /* end */ int Test;",
             "/* start */ public /* middle */ /* end */ int Test;")]
         [InlineData(
-            "/* start */ public /* middle */ new/* end */ int [|Test|];",
+            "/* start */ public /* middle */ [|new|]/* end */ int Test;",
             "/* start */ public /* middle */ /* end */ int Test;")]
         [InlineData(
-            "/* start */ public /* middle */new/* end */ int [|Test|];",
+            "/* start */ public /* middle */[|new|]/* end */ int Test;",
             "/* start */ public /* middle *//* end */ int Test;")]
         [InlineData(
-            "new /* end */ int [|Test|];",
+            "[|new|] /* end */ int Test;",
             "/* end */ int Test;")]
         [InlineData(
-            "new     int [|Test|];",
+            "[|new|]     int Test;",
             "int Test;")]
         [InlineData(
-            "/* start */ new /* end */ int [|Test|];",
-            "/* start */ /* end */ int [|Test|];")]
+            "/* start */ [|new|] /* end */ int Test;",
+            "/* start */ /* end */ int Test;")]
         public Task TestRemoveNewFromModifiersWithComplexTrivia(string original, string expected) =>
             TestRemoveNewModifierCodeFixAsync(original, expected);
 
