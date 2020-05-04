@@ -61,15 +61,8 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeFixes.RemoveNewModifier
             {
                 var nextToken = newModifier.GetNextToken();
 
-                var triviaToMove = new SyntaxTriviaList()
-                    .Add(SyntaxFactory.ElasticMarker)
-                    .AddRange(newModifier.LeadingTrivia)
-                    .Add(SyntaxFactory.ElasticMarker)
-                    .AddRange(newModifier.TrailingTrivia)
-                    .Add(SyntaxFactory.ElasticMarker);
-
                 var nextTokenWithMovedTrivia = nextToken
-                    .WithPrependedLeadingTrivia(triviaToMove);
+                    .WithPrependedLeadingTrivia(newModifier.LeadingTrivia.AddRange(newModifier.TrailingTrivia).Add(SyntaxFactory.ElasticMarker));
 
                 newNode = newNode.ReplaceToken(nextToken, nextTokenWithMovedTrivia);
             }
