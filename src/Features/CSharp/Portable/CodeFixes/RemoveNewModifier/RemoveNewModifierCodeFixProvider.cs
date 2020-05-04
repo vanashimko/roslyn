@@ -14,6 +14,7 @@ using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp.Extensions;
 using Microsoft.CodeAnalysis.CSharp.LanguageServices;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Editing;
 using Microsoft.CodeAnalysis.Shared.Extensions;
 
 namespace Microsoft.CodeAnalysis.CSharp.CodeFixes.RemoveNewModifier
@@ -52,17 +53,18 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeFixes.RemoveNewModifier
                 return;
 
             context.RegisterCodeFix(
-                new MyCodeAction(ct => FixAsync(context.Document, memberDeclarationSyntax, ct)),
+                new MyCodeAction(ct => FixAsync(context.Document, context.Document.Project.Solution.Workspace, memberDeclarationSyntax, ct)),
                 context.Diagnostics);
         }
 
-        private async Task<Document> FixAsync(Document document, MemberDeclarationSyntax node, CancellationToken cancellationToken)
+        private async Task<Document> FixAsync(Document document, Workspace workspace, MemberDeclarationSyntax memberDeclaration, CancellationToken cancellationToken)
         {
             var syntaxFacts = CSharpSyntaxFacts.Instance;
 
-            var newModifier = GetNewModifier(node, syntaxFacts);
+            var newModifier = GetNewModifier(memberDeclaration, syntaxFacts);
 
-            var newNode = node;
+            var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
+            var editor = new SyntaxEditor(root, workspace);
 
             if (newModifier.HasTrailingTrivia || newModifier.HasLeadingTrivia)
             {
@@ -84,25 +86,35 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeFixes.RemoveNewModifier
                 if (isFirstTokenOnLine)
                 {
                     var nextTokenWithMovedTrivia = nextToken.WithLeadingTrivia(newTrivia);
-                    newNode = newNode.ReplaceToken(nextToken, nextTokenWithMovedTrivia);
+                    editor.ReplaceNode(
+                        nextToken.Parent,
+                        nextToken.Parent.ReplaceToken(nextToken, nextTokenWithMovedTrivia));
                 }
                 else
                 {
                     var previousTokenWithMovedTrivia = previousToken.WithTrailingTrivia(newTrivia);
-                    newNode = newNode.ReplaceToken(previousToken, previousTokenWithMovedTrivia);
+                    editor.ReplaceNode(
+                        previousToken.Parent,
+                        previousToken.Parent.ReplaceToken(previousToken, previousTokenWithMovedTrivia));
                 }
             }
 
-            newNode = newNode.ReplaceToken(GetNewModifier(newNode, syntaxFacts), SyntaxFactory.Token(SyntaxKind.None));
+            editor.ReplaceNode(
+                memberDeclaration,
+                (current, _) =>
+                {
+                    var currentMemberDeclaration = (MemberDeclarationSyntax)current;
+                    return currentMemberDeclaration.WithModifiers(RemoveNew(currentMemberDeclaration.Modifiers));
+                });
 
-            var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
-            var newRoot = root.ReplaceNode(node, newNode);
-
-            return document.WithSyntaxRoot(newRoot);
+            return document.WithSyntaxRoot(editor.GetChangedRoot());
         }
 
         private static SyntaxToken GetNewModifier(SyntaxNode fromNode, CSharpSyntaxFacts syntaxFacts) =>
             syntaxFacts.GetModifierTokens(fromNode).FirstOrDefault(m => m.IsKind(SyntaxKind.NewKeyword));
+
+        private static SyntaxTokenList RemoveNew(SyntaxTokenList tokenList) => 
+            tokenList.SkipKinds(SyntaxKind.NewKeyword).ToSyntaxTokenList();
 
         private static SyntaxTriviaList CollapseSequentialWhitespaceTrivia(SyntaxTriviaList triviaList)
         {
