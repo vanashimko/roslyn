@@ -74,7 +74,10 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeFixes.RemoveNewModifier
                 newNode = newNode.ReplaceToken(nextToken, nextTokenWithMovedTrivia);
             }
 
-            newNode = newNode.ReplaceToken(GetNewModifier(newNode, syntaxFacts), SyntaxFactory.Token(SyntaxKind.None));
+            var modifiers = syntaxFacts.GetModifiers(newNode);
+            newModifier = modifiers.FirstOrDefault(m => m.IsKind(SyntaxKind.NewKeyword));
+            modifiers = modifiers.Remove(newModifier);
+            newNode = newNode.WithModifiers(modifiers);
 
             var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
             var newRoot = root.ReplaceNode(node, newNode);
